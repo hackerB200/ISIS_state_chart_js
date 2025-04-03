@@ -16,19 +16,52 @@ stage.add(dessin);
 stage.add(temporaire);
 
 const MAX_POINTS = 10;
-let polyline // La polyline en cours de construction;
+let polyline; // La polyline en cours de construction;
 
 const polylineMachine = createMachine(
     {
-        /** @xstate-layout N4IgpgJg5mDOIC5gF8A0IB2B7CdGgAcsAbATwBkBLDMfEI2SgF0qwzoA9EBaANnVI9eAOgAM4iZMkB2ZGnokK1MMMoRitJAsYs2nRABYATAMQAOAIzCD0gJwXetgwGZezgw9ty5QA */
+        /** @xstate-layout N4IgpgJg5mDOIC5QAcD2AbAngGQJYDswA6XCdMAYgFkB5AVQGUBRAYWwEkWBpAbQAYAuohSpYuAC65U+YSAAeiAKwA2InwCc6gBwAWPloDsigwCYAjFvWKANCEyIAtGZPqiiixp0BmdXsVevEwBfINs0LDxCIggAJwBDAHcCKGp6ZloANSZ+ISQQNDFJaVkFBC8NIh1tMz4DPncdZVt7BAcTQ0qzd3VlL0tDbxCwjBwCYljE5NTGVg5uHNkCiSkZPNKAszVlAy1DfxrFeubEHyItM29dHQM+-TN1IfyRyPH4pPwUgCE4gGMAa1gyF+YAWeSWRVWoFK3lcil0vmUfBcBh6x1aJj4XiIphqzguWhUfUe4VGUQm7xSTHw4jAMVBIkKKxKiC6WKsmm8GL4fB0aPxRBMyh0imFgrFWm2xOeY2ibymTFgPziyBBgkWomWxTWiB0WjcFzMARMcOUIv0vLsjkCmwCxj4iJRF2NOilERl5KmtBmbE4vDMuQZmsh8hO+jcwvcikFuz4XTRJlO90RWi8yi6SJ0Jhdj3wqAgcHVbsI6sZWqhjmcfCI6m5F005UFZhRaIcej1vWMCfKZjrildpOIpHIJaDzNapmrtaq6gbaebltaNQMahnGhF6h77i8-ZessmHxHELHCb1Lg5XjqEoCOxbS5X5SsVU3zgMIRCQA */
         id: "polyLine",
         initial: "idle",
-        states : {
+        states: {
             idle: {
+                on: {
+                    MOUSECLICK: {
+                        target: "drawing",
+                        actions: ["createLine"],
+                    }
+                }
             },
-        },
+            drawing: {
+                on: {
+                    MOUSEMOVE: {
+                        actions: ["setLastPoint"]
+                    },
+                    MOUSECLICK: [{
+                        guard: "pasPlein",
+                        actions: ["addPoint"]
+                    }, {
+                        target: "idle",
+                        reenter: true,
+                        actions: ["addPoint","saveLine"]
+                    }],
+                    Backspace: {
+                        guard: "plusDeUnPoint",
+                        actions: ["removeLastPoint"]
+                    },
+                    Enter: {
+                        guard: "plusDeUnPoint",
+                        actions: ["saveLine"],
+                        target: "idle"
+                    },
+                    Escape: {
+                        actions: ["abandon"],
+                        target: "idle"
+                    }
+                }
+            },
+        }
     },
-    // Quelques actions et guardes que vous pouvez utiliser dans le statechart
     {
         actions: {
             // Créer une nouvelle polyline
@@ -90,11 +123,10 @@ const polylineMachine = createMachine(
             pasPlein: (context, event) => {
                 return polyline.points().length < MAX_POINTS * 2;
             },
-            // On peut enlever un point
-            plusDeDeuxPoints: (context, event) => {
-                // Deux coordonnées pour chaque point, plus le point provisoire
-                return polyline.points().length > 6;
-            },
+            // On peut supprimer un point
+            plusDeUnPoint: (context, event) => {
+                return polyline.points().length > 4;
+            }
         },
     }
 );
@@ -104,15 +136,14 @@ actor.start();
 
 // On transmet les événements au statechart
 stage.on("click", () => {
-    actor.send({type: "MOUSECLICK"});
+    actor.send({ type: "MOUSECLICK" });
 });
 
 stage.on("mousemove", () => {
-    actor.send({type: "MOUSEMOVE"});
+    actor.send({ type: "MOUSEMOVE" });
 });
 
 // Envoi des touches clavier à la machine
 window.addEventListener("keydown", (event) => {
-    console.log("Key pressed:", event.key);
-    actor.send({type: event.key});
+    actor.send({ type: event.key });
 });
